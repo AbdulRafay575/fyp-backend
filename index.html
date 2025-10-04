@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FYP Backend Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+        }
+        
+        .tab-container {
+            display: flex;
+            background: #34495e;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            background: #34495e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            flex: 1;
+            transition: background 0.3s;
+        }
+        
+        .tab:hover {
+            background: #2c3e50;
+        }
+        
+        .tab.active {
+            background: #3498db;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        input, textarea, select, button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        textarea {
+            height: 150px;
+            resize: vertical;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .success {
+            background: #2ecc71;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>FYP Backend Tester</h1>
+            <p>Test all your AI features without authentication issues</p>
+        </header>
+        
+        <div class="tab-container">
+            <button class="tab active" onclick="openTab('document')">Document Summary</button>
+            <button class="tab" onclick="openTab('youtube')">YouTube Summary</button>
+            <button class="tab" onclick="openTab('questions')">Question Generator</button>
+            <button class="tab" onclick="openTab('dubbing')">YouTube Dubbing</button>
+            <button class="tab" onclick="openTab('pastpapers')">Past Papers</button>
+        </div>
+        
+        <!-- Document Summary Tab -->
+        <div id="document" class="tab-content active">
+            <h2>Document Summary Generator</h2>
+            <div class="form-group">
+                <label for="documentText">Enter Text or Upload File:</label>
+                <textarea id="documentText" placeholder="Paste your text here or upload a file..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="documentFile">Or Upload File:</label>
+                <input type="file" id="documentFile" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+            </div>
+            <button onclick="generateSummary()">Generate Summary</button>
+            <div class="loading" id="documentLoading">
+                <div class="spinner"></div>
+                <p>Processing your document...</p>
+            </div>
+            <div class="result" id="documentResult"></div>
+        </div>
+        
+        <!-- YouTube Summary Tab -->
+        <div id="youtube" class="tab-content">
+            <h2>YouTube Video Summarizer</h2>
+            <div class="form-group">
+                <label for="youtubeUrl">YouTube Video URL:</label>
+                <input type="url" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+            <button onclick="summarizeYouTube()">Summarize Video</button>
+            <div class="loading" id="youtubeLoading">
+                <div class="spinner"></div>
+                <p>Extracting transcript and generating summary...</p>
+            </div>
+            <div class="result" id="youtubeResult"></div>
+        </div>
+        
+        <!-- Question Generator Tab -->
+        <div id="questions" class="tab-content">
+            <h2>Question Generator</h2>
+            <div class="form-group">
+                <label for="questionText">Enter Text for Question Generation:</label>
+                <textarea id="questionText" placeholder="Paste the content you want to generate questions from..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="questionFile">Or Upload File:</label>
+                <input type="file" id="questionFile" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+            </div>
+            <button onclick="generateQuestions()">Generate Questions</button>
+            <div class="loading" id="questionsLoading">
+                <div class="spinner"></div>
+                <p>Generating questions...</p>
+            </div>
+            <div class="result" id="questionsResult"></div>
+        </div>
+        
+        <!-- YouTube Dubbing Tab -->
+        <div id="dubbing" class="tab-content">
+            <h2>YouTube Video Dubbing</h2>
+            <div class="form-group">
+                <label for="dubbingUrl">YouTube Video URL:</label>
+                <input type="url" id="dubbingUrl" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+            <div class="form-group">
+                <label for="targetLanguage">Target Language:</label>
+                <select id="targetLanguage">
+                    <option value="Urdu">Urdu</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="French">French</option>
+                    <option value="German">German</option>
+                </select>
+            </div>
+            <button onclick="createDubbing()">Create Dubbed Audio</button>
+            <div class="loading" id="dubbingLoading">
+                <div class="spinner"></div>
+                <p>Creating dubbed audio... This may take a few minutes.</p>
+            </div>
+            <div class="result" id="dubbingResult"></div>
+        </div>
+        
+        <!-- Past Papers Tab -->
+        <div id="pastpapers" class="tab-content">
+            <h2>Past Paper Analysis</h2>
+            <div class="form-group">
+                <label for="contentFile">Content Document (Textbook/Notes):</label>
+                <input type="file" id="contentFile" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+            </div>
+            <div class="form-group">
+                <label for="pastPaperFile">Past Paper Document:</label>
+                <input type="file" id="pastPaperFile" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+            </div>
+            <button onclick="analyzePastPapers()">Analyze Past Papers</button>
+            <div class="loading" id="pastpapersLoading">
+                <div class="spinner"></div>
+                <p>Analyzing past papers...</p>
+            </div>
+            <div class="result" id="pastpapersResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        function openTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.currentTarget.classList.add('active');
+        }
+        
+        function showLoading(tab) {
+            document.getElementById(tab + 'Loading').style.display = 'block';
+            document.getElementById(tab + 'Result').innerHTML = '';
+        }
+        
+        function hideLoading(tab) {
+            document.getElementById(tab + 'Loading').style.display = 'none';
+        }
+        
+        function showResult(tab, content, isError = false) {
+            const resultDiv = document.getElementById(tab + 'Result');
+            resultDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${content}</div>`;
+        }
+        
+        async function makeRequest(endpoint, data = null, method = 'POST') {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Request failed');
+                }
+                
+                return result;
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        }
+        
+        async function uploadFile(endpoint, file, additionalData = {}) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Add additional data to formData
+                Object.keys(additionalData).forEach(key => {
+                    formData.append(key, additionalData[key]);
+                });
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Upload failed');
+                }
+                
+                return result;
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        }
+        
+        // Document Summary Function
+        async function generateSummary() {
+            const text = document.getElementById('documentText').value;
+            const file = document.getElementById('documentFile').files[0];
+            
+            if (!text && !file) {
+                alert('Please enter text or upload a file');
+                return;
+            }
+            
+            showLoading('document');
+            
+            try {
+                let result;
+                if (file) {
+                    result = await uploadFile('/documents/upload', file);
+                } else {
+                    result = await makeRequest('/documents/upload', { text: text });
+                }
+                
+                hideLoading('document');
+                showResult('document', `
+                    <h3>Summary Generated Successfully!</h3>
+                    <p><strong>Original Text Length:</strong> ${result.extracted_text_length} characters</p>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <h4>Summary:</h4>
+                        <p>${result.summary.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `);
+            } catch (error) {
+                hideLoading('document');
+                showResult('document', `Error: ${error.message}`, true);
+            }
+        }
+        
+        // YouTube Summary Function
+        async function summarizeYouTube() {
+            const url = document.getElementById('youtubeUrl').value;
+            
+            if (!url) {
+                alert('Please enter a YouTube URL');
+                return;
+            }
+            
+            showLoading('youtube');
+            
+            try {
+                const result = await makeRequest(`/youtube/summarize?video_url=${encodeURIComponent(url)}`);
+                
+                hideLoading('youtube');
+                showResult('youtube', `
+                    <h3>YouTube Summary Generated!</h3>
+                    <p><strong>Video URL:</strong> ${result.video_url}</p>
+                    <p><strong>Transcript Segments:</strong> ${result.transcript_segments}</p>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <h4>Summary:</h4>
+                        <p>${result.summary.replace(/\n/g, '<br>')}</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <h4>Transcript Preview:</h4>
+                        <p>${result.full_transcript}</p>
+                    </div>
+                `);
+            } catch (error) {
+                hideLoading('youtube');
+                showResult('youtube', `Error: ${error.message}`, true);
+            }
+        }
+        
+        // Question Generator Function
+        async function generateQuestions() {
+            const text = document.getElementById('questionText').value;
+            const file = document.getElementById('questionFile').files[0];
+            
+            if (!text && !file) {
+                alert('Please enter text or upload a file');
+                return;
+            }
+            
+            showLoading('questions');
+            
+            try {
+                let result;
+                if (file) {
+                    result = await uploadFile('/questions/generate', file);
+                } else {
+                    result = await makeRequest('/questions/generate', { text: text });
+                }
+                
+                hideLoading('questions');
+                showResult('questions', `
+                    <h3>Questions Generated Successfully!</h3>
+                    <p><strong>Input Length:</strong> ${result.input_length} characters</p>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <h4>Generated Questions:</h4>
+                        <p>${result.questions.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `);
+            } catch (error) {
+                hideLoading('questions');
+                showResult('questions', `Error: ${error.message}`, true);
+            }
+        }
+        
+        // YouTube Dubbing Function
+        async function createDubbing() {
+            const url = document.getElementById('dubbingUrl').value;
+            const language = document.getElementById('targetLanguage').value;
+            
+            if (!url) {
+                alert('Please enter a YouTube URL');
+                return;
+            }
+            
+            showLoading('dubbing');
+            
+            try {
+                const result = await makeRequest('/dubbing/create', {
+                    video_url: url,
+                    target_language: language
+                });
+                
+                hideLoading('dubbing');
+                showResult('dubbing', `
+                    <h3>Dubbing Created Successfully!</h3>
+                    <p><strong>Video URL:</strong> ${result.video_url}</p>
+                    <p><strong>Target Language:</strong> ${result.target_language}</p>
+                    <p><strong>Audio File:</strong> ${result.audio_file}</p>
+                    <a href="${API_BASE}${result.download_url}" target="_blank" style="display: inline-block; background: #3498db; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 10px;">
+                        Download Dubbed Audio
+                    </a>
+                `);
+            } catch (error) {
+                hideLoading('dubbing');
+                showResult('dubbing', `Error: ${error.message}`, true);
+            }
+        }
+        
+        // Past Papers Analysis Function
+        async function analyzePastPapers() {
+            const contentFile = document.getElementById('contentFile').files[0];
+            const pastPaperFile = document.getElementById('pastPaperFile').files[0];
+            
+            if (!contentFile || !pastPaperFile) {
+                alert('Please upload both content file and past paper file');
+                return;
+            }
+            
+            showLoading('pastpapers');
+            
+            try {
+                const formData = new FormData();
+                formData.append('content_file', contentFile);
+                formData.append('past_paper_file', pastPaperFile);
+                
+                const response = await fetch(`${API_BASE}/past-papers/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Analysis failed');
+                }
+                
+                hideLoading('pastpapers');
+                showResult('pastpapers', `
+                    <h3>Past Paper Analysis Complete!</h3>
+                    <p><strong>Content Length:</strong> ${result.content_length} characters</p>
+                    <p><strong>Past Paper Length:</strong> ${result.past_paper_length} characters</p>
+                    <div style="background: white; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                        <h4>Analysis Results:</h4>
+                        <p>${result.analysis.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `);
+            } catch (error) {
+                hideLoading('pastpapers');
+                showResult('pastpapers', `Error: ${error.message}`, true);
+            }
+        }
+        
+        // File input handlers to sync with textareas
+        document.getElementById('documentFile').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                document.getElementById('documentText').value = `File selected: ${e.target.files[0].name}`;
+            }
+        });
+        
+        document.getElementById('questionFile').addEventListener('change', function(e) {
+            if (e.target.files[0]) {
+                document.getElementById('questionText').value = `File selected: ${e.target.files[0].name}`;
+            }
+        });
+    </script>
+</body>
+</html>
