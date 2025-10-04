@@ -2,6 +2,8 @@ import requests
 import json
 import time
 from app.config import settings
+import aiohttp
+import json
 
 class ChatGPTService:
     def __init__(self):
@@ -299,3 +301,37 @@ class ChatGPTService:
             raise Exception("ChatGPT API request timed out")
         except Exception as e:
             raise Exception(f"ChatGPT API error: {str(e)}")
+    async def translate_text_async(self, text: str, target_language: str = "Urdu"):
+        """Translate text to target language asynchronously"""
+        system_prompt = f"""
+        You are a translator from English to {target_language}.
+        Translate all normal text to {target_language}.
+        Keep technical terms, names, and proper nouns in English.
+        Make the translation natural and easy to understand.
+        Don't make it too formal - use common spoken language.
+        """
+        
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 1000
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{self.endpoint}/chat/completions", 
+                headers=headers, 
+                data=json.dumps(data),
+                timeout=30
+            ) as response:
+                result = await response.json()
+                return result['choices'][0]['message']['content']
