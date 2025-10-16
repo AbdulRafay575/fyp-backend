@@ -60,10 +60,10 @@ async def summarize_youtube_video(request: YouTubeSummaryRequest, authorization:
         # Generate summary
         if len(chunks) > 1:
             print("Using chunked summary approach...")
-            summary = chatgpt_service.get_chunked_summary(chunks, request.target_language)
+            summary = chatgpt_service.get_chunked_summary(chunks)
         else:
             print("Using single summary approach...")
-            summary = chatgpt_service.get_summary(clean_text, request.target_language)
+            summary = chatgpt_service.get_summary(clean_text)
         
         processing_time = time.time() - start_time
         

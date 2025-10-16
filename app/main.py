@@ -115,6 +115,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Include routers as normal
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(users_router, prefix="/users", tags=["Users"])
@@ -124,6 +125,7 @@ app.include_router(past_papers_router, prefix="/past-papers", tags=["Past Papers
 app.include_router(questions_router, prefix="/questions", tags=["Questions"])
 app.include_router(youtube_router, prefix="/youtube", tags=["YouTube"])
 app.include_router(dubbing_router, prefix="/dubbing", tags=["Dubbing"])
+
 
 # --- Temporary override to ignore auth ---
 @app.middleware("http")

@@ -164,28 +164,104 @@ async def update_summary(summary_id: int, request: SummaryUpdateRequest, authori
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Invalid authorization header")
         
-        return {
-            "success": False,
-            "message": "Summaries table not available yet."
-        }
+        token = authorization.replace("Bearer ", "")
+        user_data = auth_service.get_current_user(token)
         
+        # Build update data
+        update_data = {"updated_at": datetime.utcnow().isoformat()}
+        if request.title is not None:
+            update_data["title"] = request.title
+        if request.content is not None:
+            update_data["content"] = request.content
+        if request.source_text is not None:
+            update_data["source_text"] = request.source_text
+        
+        # Update summary in Supabase
+        result = supabase.table("summaries").update(update_data).eq("id", summary_id).eq("user_id", user_data["user"]["id"]).execute()
+        
+        if result.data:
+            summary_data = result.data[0]
+            summary = SummaryResponse(
+                id=summary_data["id"],
+                title=summary_data["title"],
+                content=summary_data["content"],
+                source_text=summary_data.get("source_text"),
+                source_type=summary_data["source_type"],
+                user_id=summary_data["user_id"],
+                document_id=summary_data.get("document_id"),
+                created_at=summary_data["created_at"],
+                updated_at=summary_data["updated_at"]
+            )
+            
+            return {
+                "success": True, 
+                "summary": summary,
+                "message": "Summary updated successfully"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Summary not found or you don't have permission to update it"
+            }
+            
     except Exception as e:
-        return handle_table_error(e)
+        error_msg = str(e)
+        if "PGRST205" in error_msg or "table" in error_msg.lower() and "not found" in error_msg.lower():
+            return {
+                "success": False,
+                "message": "Summaries table not found. Please create the table in your Supabase database first."
+            }
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.delete("/{summary_id}", response_model=dict)
 async def delete_summary(summary_id: int, authorization: str = Header(None)):
-    """Delete summary"""
+    """Delete a summary permanently"""
     try:
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Invalid authorization header")
-        
-        return {
-            "success": False,
-            "message": "Summaries table not available yet."
-        }
-        
+
+        token = authorization.replace("Bearer ", "")
+        user_data = auth_service.get_current_user(token)
+        user_id = user_data["user"]["id"]
+
+        # Try deleting summary for current user
+        result = (
+            supabase.table("summaries")
+            .delete()
+            .eq("id", summary_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+
+        if result.data:
+            return {"success": True, "message": "Summary deleted successfully."}
+        else:
+            return {
+                "success": False,
+                "message": "Summary not found or you don't have permission to delete it.",
+            }
+
     except Exception as e:
         return handle_table_error(e)
+
+@router.delete("/delete/all", response_model=dict)
+async def delete_all_summaries(authorization: str = Header(None)):
+    """Delete all summaries of the current user"""
+    try:
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+
+        token = authorization.replace("Bearer ", "")
+        user_data = auth_service.get_current_user(token)
+        user_id = user_data["user"]["id"]
+
+        supabase.table("summaries").delete().eq("user_id", user_id).execute()
+
+        return {"success": True, "message": "All summaries deleted successfully."}
+
+    except Exception as e:
+        return handle_table_error(e)
+
 
 @router.get("/search/", response_model=dict)
 async def search_summaries(query: str, authorization: str = Header(None)):

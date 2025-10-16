@@ -61,63 +61,22 @@ async def logout():
         return {"success": True, "message": "Logged out successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 @router.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest):
-    """Password reset request"""
-    try:
-        result = auth_service.reset_password(request.email)
-        return {
-            "success": True, 
-            "message": "Password reset email sent. Check your inbox."
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/reset-password")
-async def reset_password(request: ResetPasswordRequest):
-    """Reset password with token from email"""
-    try:
-        result = auth_service.reset_password_with_token(request.token, request.new_password)
-        return {
-            "success": True, 
-            "message": "Password reset successfully"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.post("/update-password")
-async def update_password(request: UpdatePasswordRequest, authorization: str = Header(None)):
-    """Update password for logged-in user"""
-    try:
-        if not authorization or not authorization.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Invalid authorization header")
-        
-        token = authorization.replace("Bearer ", "")
-        # Verify current user
-        auth_service.get_current_user(token)
-        
-        result = auth_service.update_password(request.new_password)
-        return {
-            "success": True, 
-            "message": "Password updated successfully"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+async def forgot_password(request: dict):
+    email = request.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+    return auth_service.reset_password(email)
 
 @router.get("/verify-reset-token")
 async def verify_reset_token(token: str):
-    """Verify if a reset token is valid"""
-    try:
-        result = auth_service.verify_reset_token(token)
-        return {
-            "success": result["valid"],
-            "valid": result["valid"],
-            "user": result.get("user"),
-            "error": result.get("error")
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return auth_service.verify_reset_token(token)
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    return auth_service.reset_password_with_token(req.token, req.new_password)
+
+
 
 @router.get("/me")
 async def get_current_user(authorization: str = Header(None)):

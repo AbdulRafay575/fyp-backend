@@ -11,30 +11,32 @@ class ChatGPTService:
         self.endpoint = "https://models.github.ai/inference"
         self.model = "openai/gpt-4.1-mini"
     
-    def get_summary(self, text: str, target_language: str = "Urdu"):
+    def get_summary(self, text: str):
         """Get summary for text"""
         system_prompt = f"""
-        You are a document summarizer. Create a comprehensive summary in 2 languages: 
-        English and {target_language}. 
-        
-        Format your response as:
-        ENGLISH SUMMARY:
-        [English summary here]
-        
-        {target_language.upper()} SUMMARY:
-        [{target_language} summary here]
-        
-        KEY POINTS:
-        - [Key point 1]
-        - [Key point 2]
-        - [Key point 3]
-        - [Key point 4]
-        - [Key point 5]
+       You are summarizing a segment of a YouTube video.
+
+🎯 Objective:
+Create a clear and well-structured summary of this specific segment.
+
+📋 Guidelines:
+- Capture **all key ideas, insights, facts, and topics** discussed in this segment.
+- **Remove filler words**, repetition, and casual speech patterns.
+- **Do not mention speakers** (e.g., “the host said”, “she explains”).
+- **Ignore any promotional or sponsored content** that does not add to the video’s core message.
+- Write from a **neutral, third-person perspective**.
+- Maintain a **professional, educational, and informative tone**.
+- Use **short paragraphs or bullet points** for readability.
+- Focus on delivering **complete and coherent information** from this segment — it should make sense even without other parts.
+- Avoid assumptions or adding information not present in the text.
+
+📘 Output Format:
+A single well-written paragraph (or short set of paragraphs) summarizing this segment clearly and professionally.
         """
         
         return self._make_request(system_prompt, text)
     
-    def get_chunked_summary(self, text_chunks: list, target_language: str = "Urdu"):
+    def get_chunked_summary(self, text_chunks: list):
         """Get summary for chunked text - improved for long documents"""
         if not text_chunks:
             return "No content to summarize"
@@ -43,7 +45,7 @@ class ChatGPTService:
         
         # For very long documents, process in batches
         if len(text_chunks) > 10:
-            return self._process_large_document(text_chunks, target_language)
+            return self._process_large_document(text_chunks)
         
         chunk_summaries = []
         
@@ -51,10 +53,25 @@ class ChatGPTService:
             print(f"Processing chunk {i+1}/{len(text_chunks)}...")
             
             system_prompt = f"""
-            You are summarizing part {i+1} of {len(text_chunks)} of a document.
-            Extract the 3-5 most important key points from this segment.
-            Keep it concise but informative.
-            """
+           You are creating a final, comprehensive summary by combining summaries of multiple video segments.
+
+🧠 Objective:
+Produce a cohesive and well-structured final summary that reads naturally, as if summarizing the entire video in one flow.
+
+📋 Guidelines:
+- Capture **all key ideas, insights, facts, and topics** discussed throughout the video.
+- **Eliminate filler words**, repetition, and personal speech patterns.
+- **Do not mention speakers** (e.g., “the host said”, “she explains”).
+- **Exclude promotional or sponsored content** — focus only on educational, informational, or main thematic material.
+- Write from a **neutral, third-person perspective**.
+- Maintain a **professional and informative tone**.
+- Use **short paragraphs or clear bullet points** for readability.
+- Ensure the summary feels **complete and cohesive**, not like separated parts.
+- Do **not** add new information or assumptions not present in the provided summaries.
+
+📘 Output Format:
+A well-written paragraph (or short set of paragraphs) that reads like a complete, natural summary of the entire video that is concise.
+           """
             
             try:
                 chunk_summary = self._make_request(system_prompt, chunk[:5000])  # Limit chunk size
@@ -64,8 +81,12 @@ class ChatGPTService:
                 print(f"Error processing chunk {i+1}: {e}")
                 chunk_summaries.append(f"Segment {i+1}: [Summary unavailable]")
         
-        return self._combine_chunk_summaries(chunk_summaries, target_language)
+        return self._combine_chunk_summaries(chunk_summaries)
     
+
+
+
+
     def generate_questions(self, text: str, num_questions: int = 5):
         """Generate practice questions from text"""
         system_prompt = f"""
@@ -123,14 +144,14 @@ class ChatGPTService:
         
         return self._combine_questions(all_questions, num_questions)
     
-    def _process_large_document(self, text_chunks: list, target_language: str):
+    def _process_large_document(self, text_chunks: list):
         """Process very long documents by sampling key segments"""
         print("Large document detected, using sampling strategy...")
         
         sampled_chunks = self._sample_document_chunks(text_chunks)
         print(f"Sampled {len(sampled_chunks)} key segments from {len(text_chunks)} total chunks")
         
-        return self.get_chunked_summary(sampled_chunks, target_language)
+        return self.get_chunked_summary(sampled_chunks)
     
     def _sample_document_chunks(self, text_chunks: list) -> list:
         """Sample representative chunks from document"""
@@ -159,7 +180,7 @@ class ChatGPTService:
         
         return [text_chunks[i] for i in sorted(set(sample_indices))]
     
-    def _combine_chunk_summaries(self, chunk_summaries: list, target_language: str):
+    def _combine_chunk_summaries(self, chunk_summaries: list):
         """Combine individual chunk summaries into final summary"""
         combined_text = "\n\n".join([
             f"PART {i+1} SUMMARY:\n{summary}" 
@@ -167,24 +188,25 @@ class ChatGPTService:
         ])
         
         system_prompt = f"""
-        You are creating a final comprehensive document summary by combining summaries of different parts.
+       You are creating a final, comprehensive summary by combining summaries of multiple video segments.
+
+🧠 Objective:
+Produce a cohesive and well-structured final summary that reads naturally, as if summarizing the entire video in one flow.
+
+📋 Guidelines:
+- Capture **all key ideas, insights, facts, and topics** discussed throughout the video.
+- **Eliminate filler words**, repetition, and personal speech patterns.
+- **Do not mention speakers** (e.g., “the host said”, “she explains”).
+- **Exclude promotional or sponsored content** — focus only on educational, informational, or main thematic material.
+- Write from a **neutral, third-person perspective**.
+- Maintain a **professional and informative tone**.
+- Use **short paragraphs or clear bullet points** for readability.
+- Ensure the summary feels **complete and cohesive**, not like separated parts.
+- Do **not** add new information or assumptions not present in the provided summaries.
+
+📘 Output Format:
+A well-written paragraph (or short set of paragraphs) that reads like a complete, natural summary of the entire video.
         
-        Create a structured response with:
-        
-        ENGLISH SUMMARY:
-        [Comprehensive English summary combining all parts]
-        
-        {target_language.upper()} SUMMARY:
-        [Comprehensive {target_language} summary combining all parts]
-        
-        KEY POINTS:
-        - [Most important key point 1]
-        - [Most important key point 2]
-        - [Most important key point 3]
-        - [Most important key point 4]
-        - [Most important key point 5]
-        
-        Focus on the main themes and key insights across all parts.
         """
         
         return self._make_request(system_prompt, combined_text)

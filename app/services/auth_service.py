@@ -86,57 +86,45 @@ class AuthService:
             raise Exception(f"Authentication error: {str(e)}")
     
     def reset_password(self, email: str):
-        """Password reset request - Updated for Supabase flow"""
         try:
-            # This will send an email with a reset link that redirects to your frontend
             response = self.client.auth.reset_password_for_email(
                 email,
-                {
-                    "redirectTo": "http://localhost:3000/reset-password"
+                options={
+                    "redirect_to": "http://localhost:3000/reset-password"
                 }
             )
-            return {"message": "Password reset email sent"}
+            return {"message": "Password reset email sent successfully"}
         except Exception as e:
-            raise Exception(f"Password reset error: {str(e)}")
-    
-    def update_password(self, new_password: str):
-        """Update password for authenticated user"""
-        try:
-            response = self.client.auth.update_user({
-                "password": new_password
-            })
-            return {"message": "Password updated successfully"}
-        except Exception as e:
-            raise Exception(f"Password update error: {str(e)}")
-    
+            raise HTTPException(status_code=400, detail=f"Password reset error: {str(e)}")
+
+    # -----------------------------------------------------
+    # Step 2. Verify reset token validity
+    # -----------------------------------------------------
     def verify_reset_token(self, token: str):
-        """Verify if the reset token is valid"""
         try:
-            # Use the token to get user info
-            response = self.client.auth.get_user(token)
+            user = self.client.auth.get_user(token)
             return {
                 "valid": True,
                 "user": {
-                    "id": response.user.id,
-                    "email": response.user.email
+                    "id": user.user.id,
+                    "email": user.user.email
                 }
             }
         except Exception as e:
             return {"valid": False, "error": str(e)}
-    
+
+    # -----------------------------------------------------
+    # Step 3. Reset password using token (FIXED)
+    # -----------------------------------------------------
     def reset_password_with_token(self, token: str, new_password: str):
-        """Reset password using the token from email"""
         try:
-            # First verify the token
-            verification = self.verify_reset_token(token)
-            if not verification["valid"]:
-                raise Exception("Invalid or expired reset token")
-            
-            # Update the password
-            response = self.client.auth.update_user({
-                "password": new_password
-            })
-            
+            # Step A: Manually set session from the token
+            self.client.auth.set_session(access_token=token, refresh_token=token)
+
+            # Step B: Update password now that we have a session
+            self.client.auth.update_user({"password": new_password})
+
             return {"message": "Password reset successfully"}
         except Exception as e:
-            raise Exception(f"Password reset error: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Password reset error: {str(e)}")
+    
