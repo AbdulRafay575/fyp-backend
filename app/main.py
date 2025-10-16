@@ -99,8 +99,8 @@ from app.routes.youtube import router as youtube_router
 from app.routes.dubbing import router as dubbing_router
 
 app = FastAPI(
-    title="FYP Backend API (Temporary - No Auth)",
-    description="AI-Powered Document Processing System for FYP (Temporary)",
+    title="FYP Backend API ",
+    description="AI-Powered Document Processing System for FYP ",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
