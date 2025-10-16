@@ -166,7 +166,7 @@ async def api_info():
         "version": "1.0.0",
         "description": "AI-Powered Document Processing System",
         "features": [
-            "User Authentication (temporarily bypassed)",
+            "User Authentication ",
             "Document Processing & OCR",
             "AI Summarization",
             "Question Generation",
