@@ -15,4 +15,6 @@ elevenlabs==0.2.1
 requests==2.31.0
 pydantic==1.10.13
 aiohttp==3.8.6
+IPython>=8.0.0
+
 
