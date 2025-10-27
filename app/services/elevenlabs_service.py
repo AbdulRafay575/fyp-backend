@@ -1,4 +1,4 @@
-from elevenlabs import ElevenLabs
+# from elevenlabs import ElevenLabs
 from app.config import settings
 import aiohttp
 
