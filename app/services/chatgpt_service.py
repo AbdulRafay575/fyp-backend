@@ -163,7 +163,7 @@ A well-written paragraph (or short set of paragraphs) that reads like a complete
         if total_chunks > 1:
             sample_indices.append(total_chunks - 1)
         
-        # Include middle chunks
+        # Include middle chunks 
         if total_chunks > 3:
             middle = total_chunks // 2
             sample_indices.append(middle)

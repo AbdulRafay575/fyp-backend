@@ -263,6 +263,7 @@ async def delete_all_summaries(authorization: str = Header(None)):
         return handle_table_error(e)
 
 
+
 @router.get("/search/", response_model=dict)
 async def search_summaries(query: str, authorization: str = Header(None)):
     """Search summaries by title or content"""
