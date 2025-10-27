@@ -1,4 +1,4 @@
-# from elevenlabs import ElevenLabs
+from elevenlabs import set_api_key, generate, save
 from app.config import settings
 import aiohttp
 
