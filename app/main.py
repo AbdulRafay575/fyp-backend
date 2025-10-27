@@ -124,7 +124,7 @@ app.include_router(summaries_router, prefix="/summaries", tags=["Summaries"])
 app.include_router(past_papers_router, prefix="/past-papers", tags=["Past Papers"])
 app.include_router(questions_router, prefix="/questions", tags=["Questions"])
 app.include_router(youtube_router, prefix="/youtube", tags=["YouTube"])
-app.include_router(dubbing_router, prefix="/dubbing", tags=["Dubbing"])
+# app.include_router(dubbing_router, prefix="/dubbing", tags=["Dubbing"])
 
 
 # --- Temporary override to ignore auth ---
