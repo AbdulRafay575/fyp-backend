@@ -1,0 +1,83 @@
+# from fastapi import FastAPI
+# from fastapi.middleware.cors import CORSMiddleware
+# from app.config import settings
+
+# # Import routers
+# from app.routes.auth import router as auth_router
+# from app.routes.users import router as users_router
+# from app.routes.documents import router as documents_router
+# from app.routes.summaries import router as summaries_router
+# from app.routes.past_papers import router as past_papers_router
+# from app.routes.questions import router as questions_router
+# from app.routes.youtube import router as youtube_router
+# from app.routes.dubbing import router as dubbing_router
+
+# app = FastAPI(
+#     title="FYP Backend API",
+#     description="AI-Powered Document Processing System for Final Year Project",
+#     version="1.0.0",
+#     docs_url="/docs",
+#     redoc_url="/redoc"
+# )
+
+# # CORS middleware
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # React frontend
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# # Include routers
+# app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+# app.include_router(users_router, prefix="/users", tags=["Users"])
+# app.include_router(documents_router, prefix="/documents", tags=["Documents"])
+# app.include_router(summaries_router, prefix="/summaries", tags=["Summaries"])
+# app.include_router(past_papers_router, prefix="/past-papers", tags=["Past Papers"])
+# app.include_router(questions_router, prefix="/questions", tags=["Questions"])
+# app.include_router(youtube_router, prefix="/youtube", tags=["YouTube"])
+# app.include_router(dubbing_router, prefix="/dubbing", tags=["Dubbing"])
+
+# @app.get("/")
+# async def root():
+#     """Root endpoint with API information"""
+#     return {
+#         "message": "FYP Backend API is running!",
+#         "version": "1.0.0",
+#         "docs": "/docs",
+#         "endpoints": {
+#             "authentication": "/auth",
+#             "users": "/users",
+#             "documents": "/documents",
+#             "summaries": "/summaries",
+#             "past_papers": "/past-papers", 
+#             "questions": "/questions",
+#             "youtube": "/youtube",
+#             "dubbing": "/dubbing"
+#         }
+#     }
+
+# @app.get("/health")
+# async def health_check():
+#     """Health check endpoint"""
+#     return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
+
+# @app.get("/api-info")
+# async def api_info():
+#     """API information endpoint"""
+#     return {
+#         "name": "FYP Backend API",
+#         "version": "1.0.0",
+#         "description": "AI-Powered Document Processing System",
+#         "author": "Your Name",
+#         "features": [
+#             "User Authentication",
+#             "Document Processing & OCR",
+#             "AI Summarization", 
+#             "Question Generation",
+#             "Past Paper Analysis",
+#             "YouTube Video Summarization",
+#             "YouTube Dubbing"
+#         ]
+#     }
