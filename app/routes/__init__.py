@@ -6,7 +6,6 @@ from .summaries import router as summaries_router
 from .past_papers import router as past_papers_router
 from .questions import router as questions_router
 from .youtube import router as youtube_router
-from .dubbing import router as dubbing_router
 
 __all__ = [
     "auth_router",
@@ -16,5 +15,4 @@ __all__ = [
     "past_papers_router",
     "questions_router",
     "youtube_router",
-    "dubbing_router"
 ]
