@@ -7,6 +7,7 @@ from importlib import import_module
 
 if typing.TYPE_CHECKING:
     from .types import (
+        BodyCreatePodcastV1StudioPodcastsPostApplyTextNormalization,
         BodyCreatePodcastV1StudioPodcastsPostDurationScale,
         BodyCreatePodcastV1StudioPodcastsPostMode,
         BodyCreatePodcastV1StudioPodcastsPostMode_Bulletin,
@@ -25,6 +26,7 @@ if typing.TYPE_CHECKING:
         ProjectsCreateRequestTargetAudience,
     )
 _dynamic_imports: typing.Dict[str, str] = {
+    "BodyCreatePodcastV1StudioPodcastsPostApplyTextNormalization": ".types",
     "BodyCreatePodcastV1StudioPodcastsPostDurationScale": ".types",
     "BodyCreatePodcastV1StudioPodcastsPostMode": ".types",
     "BodyCreatePodcastV1StudioPodcastsPostMode_Bulletin": ".types",
@@ -38,7 +40,7 @@ _dynamic_imports: typing.Dict[str, str] = {
     "ProjectsCreateRequestFiction": ".projects",
     "ProjectsCreateRequestSourceType": ".projects",
     "ProjectsCreateRequestTargetAudience": ".projects",
-    "projects": ".",
+    "projects": ".projects",
 }
 
 
@@ -48,8 +50,10 @@ def __getattr__(attr_name: str) -> typing.Any:
         raise AttributeError(f"No {attr_name} found in _dynamic_imports for module name -> {__name__}")
     try:
         module = import_module(module_name, __package__)
-        result = getattr(module, attr_name)
-        return result
+        if module_name == f".{attr_name}":
+            return module
+        else:
+            return getattr(module, attr_name)
     except ImportError as e:
         raise ImportError(f"Failed to import {attr_name} from {module_name}: {e}") from e
     except AttributeError as e:
@@ -62,6 +66,7 @@ def __dir__():
 
 
 __all__ = [
+    "BodyCreatePodcastV1StudioPodcastsPostApplyTextNormalization",
     "BodyCreatePodcastV1StudioPodcastsPostDurationScale",
     "BodyCreatePodcastV1StudioPodcastsPostMode",
     "BodyCreatePodcastV1StudioPodcastsPostMode_Bulletin",

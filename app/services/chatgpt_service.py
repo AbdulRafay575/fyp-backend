@@ -22,8 +22,8 @@ Create a clear and well-structured summary of this specific segment.
 📋 Guidelines:
 - Capture **all key ideas, insights, facts, and topics** discussed in this segment.
 - **Remove filler words**, repetition, and casual speech patterns.
-- **Do not mention speakers** (e.g., “the host said”, “she explains”).
-- **Ignore any promotional or sponsored content** that does not add to the video’s core message.
+- **Do not mention speakers** (e.g., "the host said", "she explains").
+- **Ignore any promotional or sponsored content** that does not add to the video's core message.
 - Write from a **neutral, third-person perspective**.
 - Maintain a **professional, educational, and informative tone**.
 - Use **short paragraphs or bullet points** for readability.
@@ -61,7 +61,7 @@ Produce a cohesive and well-structured final summary that reads naturally, as if
 📋 Guidelines:
 - Capture **all key ideas, insights, facts, and topics** discussed throughout the video.
 - **Eliminate filler words**, repetition, and personal speech patterns.
-- **Do not mention speakers** (e.g., “the host said”, “she explains”).
+- **Do not mention speakers** (e.g., "the host said", "she explains").
 - **Exclude promotional or sponsored content** — focus only on educational, informational, or main thematic material.
 - Write from a **neutral, third-person perspective**.
 - Maintain a **professional and informative tone**.
@@ -70,7 +70,7 @@ Produce a cohesive and well-structured final summary that reads naturally, as if
 - Do **not** add new information or assumptions not present in the provided summaries.
 
 📘 Output Format:
-A well-written paragraph (or short set of paragraphs) that reads like a complete, natural summary of the entire video that is concise.
+A well-written paragraph (or short set of paragraphs) that reads like a complete, natural summary of the entire video that is concise.And generated 10 questions in it too
            """
             
             try:
@@ -84,8 +84,141 @@ A well-written paragraph (or short set of paragraphs) that reads like a complete
         return self._combine_chunk_summaries(chunk_summaries)
     
 
+    def get_OCR(self, text: str):
+        """Extract, clean, and structure text from handwritten or scanned documents using OCR, then summarize it."""
+        system_prompt = f"""
+Extract text from handwritten or scanned notes exactly as written. Do not add, remove, or change anything. Preserve the original wording and structure. Organize with proper headings if they exist. After extraction, provide a concise summary highlighting the key points without altering the meaning.
+"""
+        
+        return self._make_request(system_prompt, text)
+    
+    def get_chunked_OCR(self, text_chunks: list):
+        """Extract, clean, and structure OCR text from chunked handwritten or scanned documents for large files and give complete summary"""
+        if not text_chunks:
+            return "No content to summarize"
+        
+        print(f"Processing {len(text_chunks)} chunks...")
+        
+        # For very long documents, process in batches
+        if len(text_chunks) > 10:
+            return self._process_large_document(text_chunks)
+        
+        chunk_OCRs = []
+        
+        for i, chunk in enumerate(text_chunks):
+            print(f"Processing chunk {i+1}/{len(text_chunks)}...")
+            
+            system_prompt = f"""
+           You are processing OCR-extracted text from MULTIPLE CHUNKS of a large handwritten or scanned document.
 
+🎯 Objective:
+Convert all provided OCR chunks into a single, clean, coherent, and well-structured document while preserving the original meaning.
 
+📋 Guidelines:
+- Treat all chunks as parts of ONE document.
+- Preserve all original content — do NOT summarize, shorten, or add information.
+- Fix common OCR and handwriting errors across chunks (broken words, spacing, misread characters).
+- Remove duplicated content caused by scanning or OCR overlap.
+- Detect and format headings:
+  - Large, bold, capitalized, or clearly emphasized handwritten text → headings.
+- Maintain logical structure across the entire document:
+  - Clear section headings
+  - Paragraphs
+  - Bullet points or numbered lists where implied
+- Remove irrelevant noise across all chunks:
+  - Page numbers
+  - Dates and timestamps
+  - Scanner watermarks (CamScanner, Adobe Scan)
+  - Repeated headers or footers
+- Keep formulas, symbols, technical terms, and abbreviations intact.
+- Do NOT translate the content.
+- Do NOT mention OCR, handwriting, scanning, or image sources.
+- Ensure the final output reads smoothly as ONE continuous document, not separate parts.
+
+🧠 Formatting Rules:
+- Use consistent headings and formatting across chunks.
+- Avoid repeating section titles unnecessarily.
+- Merge broken sentences split across chunks.
+
+📘 Output Format:
+Return the fully cleaned, structured, and continuous document text as a single concise output .
+"""
+            
+            try:
+                chunk_OCR = self._make_request(system_prompt, chunk[:5000])  # Limit chunk size
+                chunk_OCRs.append(chunk_OCR)
+                time.sleep(1)  # Rate limiting
+            except Exception as e:
+                print(f"Error processing chunk {i+1}: {e}")
+                chunk_OCRs.append(f"Segment {i+1}: [Summary unavailable]")
+        
+        return self._combine_chunk_summaries(chunk_OCRs)
+
+    # NEW METHOD 1: Generate questions from text input
+    def generate_questions_from_text_input(self, text: str, num_questions: int = 10):
+        """Generate practice questions from text input (frontend text)"""
+        system_prompt = f"""
+        You are an educational question generator. Generate {num_questions} high-quality practice questions based on the provided text input.
+        
+        Guidelines:
+        - Questions should test understanding of the key concepts in the text
+        - Include diverse question types (multiple choice, short answer, conceptual)
+        - Questions should be clear and unambiguous
+        - Provide comprehensive answers for each question
+        
+        Format your response exactly as:
+        
+        QUESTIONS:
+        1. [Question 1]
+        2. [Question 2]
+        3. [Question 3]
+        ... (up to {num_questions})
+        
+        ANSWERS:
+        1. [Detailed answer 1]
+        2. [Detailed answer 2]
+        3. [Detailed answer 3]
+        ... (up to {num_questions})
+        
+        Ensure the number of questions and answers match exactly.
+        """
+        
+        return self._make_request(system_prompt, text)
+
+    # NEW METHOD 2: Answer questions from document content
+    def answer_question_from_document(self, document_text: str, question: str):
+        """Answer a specific question based on the provided document content"""
+        system_prompt = f"""
+        You are a helpful study assistant that answers questions based on a specific document.
+        
+        Document Content: {document_text[:4000]}... [truncated if too long]
+        
+        User Question: {question}
+        
+        Your task:
+        1. Answer the question based ONLY on the information in the document
+        2. If the answer is not found in the document, clearly state: "Based on the provided document, this information is not covered."
+        3. Provide specific references or quotes from the document when possible
+        4. Keep answers concise but comprehensive
+        5. Use bullet points for clarity if needed
+        6. Do NOT make up information not present in the document
+        
+        Format your response as:
+        
+        ANSWER:
+        [Your answer here]
+        
+        SOURCE REFERENCE (if available):
+        [Relevant text from document that supports your answer]
+        
+        CONFIDENCE LEVEL:
+        [High/Medium/Low based on how clearly the document addresses the question]
+        """
+        
+        # Combine document text with question for context
+        content = f"DOCUMENT CONTEXT:\n{document_text[:6000]}\n\nUSER QUESTION:\n{question}"
+        
+        return self._make_request(system_prompt, content)
 
     def generate_questions(self, text: str, num_questions: int = 5):
         """Generate practice questions from text"""
@@ -196,7 +329,7 @@ Produce a cohesive and well-structured final summary that reads naturally, as if
 📋 Guidelines:
 - Capture **all key ideas, insights, facts, and topics** discussed throughout the video.
 - **Eliminate filler words**, repetition, and personal speech patterns.
-- **Do not mention speakers** (e.g., “the host said”, “she explains”).
+- **Do not mention speakers** (e.g., "the host said", "she explains").
 - **Exclude promotional or sponsored content** — focus only on educational, informational, or main thematic material.
 - Write from a **neutral, third-person perspective**.
 - Maintain a **professional and informative tone**.
@@ -323,6 +456,7 @@ A well-written paragraph (or short set of paragraphs) that reads like a complete
             raise Exception("ChatGPT API request timed out")
         except Exception as e:
             raise Exception(f"ChatGPT API error: {str(e)}")
+    
     async def translate_text_async(self, text: str, target_language: str = "Urdu"):
         """Translate text to target language asynchronously"""
         system_prompt = f"""

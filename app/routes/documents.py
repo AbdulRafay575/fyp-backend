@@ -1,7 +1,9 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Body
 from fastapi.security import HTTPBearer
 from typing import Optional
 import os
+import re
+from typing import Dict, Any, List
 
 from app.services.document_service import DocumentService
 from app.services.ocr_service import OCRService
@@ -25,6 +27,8 @@ async def get_current_user(token: str = Depends(security)):
         return user
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Authentication error: {str(e)}")
+
+
 
 @router.post("/upload")
 async def upload_document(
@@ -69,6 +73,76 @@ async def upload_document(
                 else:
                     print("Small document, using direct processing...")
                     summary = chatgpt_service.get_summary(full_text)
+            
+            # Parse summary into structured format
+            parsed_summary = parse_summary_response(summary)
+            
+            return {
+                "success": True,
+                "filename": file.filename,
+                "summary": parsed_summary,
+                "text_preview": (extracted_text if 'extracted_text' in locals() else full_text)[:500] + "..." if len(extracted_text if 'extracted_text' in locals() else full_text) > 500 else (extracted_text if 'extracted_text' in locals() else full_text),
+                "full_text_length": len(extracted_text if 'extracted_text' in locals() else full_text)
+            }
+            
+        except Exception as e:
+            print(f"Error processing file: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
+            
+        finally:
+            cleanup_file(file_path)
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/ocr")
+async def ocr_text(
+    file: UploadFile = File(...),
+    user = Depends(get_current_user)
+):
+    """Clean and structure OCR-extracted text from handwritten notes"""
+    try:
+        user_id = user["user"]["id"]
+        
+        print(f"Processing document for user: {user_id}")
+        
+        # Validate file type
+        if not validate_file_type(file, ['text/', 'application/pdf', 'image/']):
+            raise HTTPException(status_code=400, detail="Invalid file type. Only PDF, DOCX, TXT, and images are supported.")
+        
+        # Save uploaded file
+        file_path = save_upload_file(file)
+        
+        try:
+            # Extract text based on file type
+            if file.content_type.startswith('image/'):
+                print("Processing image file...")
+                extracted_text = ocr_service.extract_text_from_image(file_path)
+                print(f"Extracted text length: {len(extracted_text)}")
+                
+                # Generate summary
+                summary = chatgpt_service.get_summary(extracted_text)
+                
+            else:
+                print("Processing document file...")
+                # Extract text with chunking for large documents
+                full_text = document_service.extract_text(file_path)
+                print(f"Extracted text length: {len(full_text)}")
+                
+                # Check if document is large and needs chunking
+                if len(full_text) > 3000:
+                    print("Large document detected, using chunked processing...")
+                    text_chunks = document_service.extract_text_chunked(file_path)
+                    print(f"Split into {len(text_chunks)} chunks")
+                    summary = chatgpt_service.get_chunked_OCR(text_chunks)
+                else:
+                    print("Small document, using direct processing...")
+                    summary = chatgpt_service.get_OCR(full_text)
             
             # Parse summary into structured format
             parsed_summary = parse_summary_response(summary)
@@ -150,6 +224,136 @@ async def generate_questions_from_document(
         raise
     except Exception as e:
         print(f"Question generation endpoint error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# NEW ENDPOINT 1: Generate questions from text input
+@router.post("/generate-questions-from-text")
+async def generate_questions_from_text_input(
+    text_data: dict = Body(...),
+    user = Depends(get_current_user)
+):
+    """Generate practice questions from text input (frontend text)"""
+    try:
+        user_id = user["user"]["id"]
+        print(f"Generating questions from text input for user: {user_id}")
+
+        # Extract text and optional number of questions from request body
+        text = text_data.get("text", "")
+        num_questions = text_data.get("num_questions", 10)
+        
+        if not text or len(text.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Text input is required")
+        
+        if num_questions < 1 or num_questions > 20:
+            num_questions = 10  # Default to 10 if out of range
+        
+        print(f"Generating {num_questions} questions from text input (length: {len(text)})")
+        
+        # Use the new service method
+        questions_response = chatgpt_service.generate_questions_from_text_input(text, num_questions)
+        
+        # Parse the response
+        parsed_questions = parse_questions_response(questions_response)
+        
+        return {
+            "success": True,
+            "questions": parsed_questions,
+            "total_questions": len(parsed_questions.get("questions", [])),
+            "input_text_preview": text[:200] + "..." if len(text) > 200 else text
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating questions from text input: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# NEW ENDPOINT 2: Answer question from uploaded document
+@router.post("/answer-question-from-document")
+async def answer_question_from_document(
+    file: UploadFile = File(...),
+    question: str = Body(...),
+    user = Depends(get_current_user)
+):
+    """Answer a specific question based on the uploaded document content"""
+    try:
+        user_id = user["user"]["id"]
+        print(f"Answering question from document for user: {user_id}")
+        
+        if not question or len(question.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Question is required")
+        
+        # Validate file type
+        if not validate_file_type(file, ['text/', 'application/pdf', 'image/']):
+            raise HTTPException(status_code=400, detail="Invalid file type")
+        
+        file_path = save_upload_file(file)
+        
+        try:
+            # Extract text from document
+            if file.content_type.startswith('image/'):
+                extracted_text = ocr_service.extract_text_from_image(file_path)
+            else:
+                extracted_text = document_service.extract_text(file_path)
+            
+            print(f"Extracted text length: {len(extracted_text)}")
+            print(f"Question: {question}")
+            
+            # Use the new service method to answer the question
+            answer_response = chatgpt_service.answer_question_from_document(extracted_text, question)
+            
+            # Parse the response into structured format
+            parsed_answer = parse_answer_response(answer_response)
+            
+            return {
+                "success": True,
+                "filename": file.filename,
+                "question": question,
+                "answer": parsed_answer,
+                "document_preview": extracted_text[:300] + "..." if len(extracted_text) > 300 else extracted_text
+            }
+            
+        except Exception as e:
+            print(f"Error processing question: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Question answering error: {str(e)}")
+            
+        finally:
+            cleanup_file(file_path)
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Question answering endpoint error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate-questions-from-summary")
+async def generate_questions_from_summary(
+    summary: str,
+    num_questions: int = 10,
+    user = Depends(get_current_user)
+):
+    """Generate practice questions from summary text"""
+    try:
+        user_id = user["user"]["id"]
+        print(f"Generating questions from summary for user: {user_id}")
+
+        if not summary or len(summary.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Summary text is required")
+
+        # Generate questions directly from summary
+        questions = chatgpt_service.generate_questions(summary, num_questions)
+
+        # Parse questions into structured format
+        parsed_questions = parse_questions_response(questions)
+
+        return {
+            "success": True,
+            "questions": parsed_questions,
+            "total_questions": len(parsed_questions.get("questions", []))
+        }
+
+    except Exception as e:
+        print(f"Summary question generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 def parse_summary_response(summary_text: str) -> dict:
@@ -256,4 +460,62 @@ def parse_questions_response(questions_text: str) -> dict:
             "questions": ["Question parsing failed"],
             "answers": ["Answer parsing failed"],
             "full_text": questions_text
+        }
+
+def parse_answer_response(answer_text: str) -> dict:
+    """Parse the answer response into structured format"""
+    try:
+        lines = answer_text.split('\n')
+        sections = {
+            "answer": "",
+            "source_reference": "",
+            "confidence_level": "Medium",
+            "full_response": answer_text
+        }
+        
+        current_section = None
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            if "ANSWER:" in line:
+                current_section = "answer"
+                sections["answer"] = line.replace("ANSWER:", "").strip()
+            elif "SOURCE REFERENCE:" in line or "SOURCE REFERENCE (if available):" in line:
+                current_section = "source"
+                sections["source_reference"] = line.replace("SOURCE REFERENCE:", "").replace("SOURCE REFERENCE (if available):", "").strip()
+            elif "CONFIDENCE LEVEL:" in line:
+                current_section = "confidence"
+                sections["confidence_level"] = line.replace("CONFIDENCE LEVEL:", "").strip()
+            elif current_section == "answer" and not line.startswith("SOURCE REFERENCE:") and not line.startswith("CONFIDENCE LEVEL:"):
+                sections["answer"] += " " + line
+            elif current_section == "source" and not line.startswith("CONFIDENCE LEVEL:"):
+                sections["source_reference"] += " " + line
+            elif current_section == "confidence":
+                sections["confidence_level"] = line
+        
+        # Clean up sections
+        sections["answer"] = sections["answer"].strip()
+        sections["source_reference"] = sections["source_reference"].strip()
+        
+        # If confidence level not found, try to detect from text
+        if sections["confidence_level"] == "Medium":
+            answer_lower = sections["answer"].lower()
+            if "not covered" in answer_lower or "not found" in answer_lower or "not in the document" in answer_lower:
+                sections["confidence_level"] = "Low"
+            elif "clearly" in answer_lower or "specifically" in answer_lower or "according to" in answer_lower:
+                sections["confidence_level"] = "High"
+        
+        return sections
+        
+    except Exception as e:
+        print(f"Error parsing answer: {str(e)}")
+        # Fallback if parsing fails
+        return {
+            "answer": answer_text,
+            "source_reference": "",
+            "confidence_level": "Medium",
+            "full_response": answer_text
         }
